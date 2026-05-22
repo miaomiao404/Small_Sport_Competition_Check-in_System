@@ -248,3 +248,49 @@ class DataManager:
     def get_match_scores(self, match_id: str) -> List[Score]:
         """取得特定賽事的所有比分紀錄"""
         return [s for s in self.scores if s.match_id == match_id]
+    
+    def get_match_winner(self, match_id: str) -> int:
+        """
+        根據目前記錄的分數，自動判定獲勝隊伍。
+        回傳: 0 (無/未結束), 1 (隊伍1獲勝), 2 (隊伍2獲勝)
+        """
+        match = self.matches.get(match_id)
+        scores = self.get_match_scores(match_id)
+        if not match or not scores:
+            return 0
+
+        # 將分數依照點數 (point_name) 進行分組
+        point_scores = {}
+        for s in scores:
+            if s.point_name not in point_scores:
+                point_scores[s.point_name] = []
+            point_scores[s.point_name].append(s)
+
+        team1_points_won = 0
+        team2_points_won = 0
+
+        # 計算每個「點」是誰獲勝
+        for point_name, games in point_scores.items():
+            t1_game_wins = sum(1 for g in games if g.team1_score > g.team2_score)
+            t2_game_wins = sum(1 for g in games if g.team2_score > g.team1_score)
+            
+            if t1_game_wins >= match.win_games:
+                team1_points_won += 1
+            elif t2_game_wins >= match.win_games:
+                team2_points_won += 1
+
+        # 判定總體賽事獲勝者
+        if "團體" in match.match_category:
+            # 團體賽五點搶三勝
+            if team1_points_won >= 3:
+                return 1
+            elif team2_points_won >= 3:
+                return 2
+        else:
+            # 個人賽贏下該點即獲勝
+            if team1_points_won > 0:
+                return 1
+            elif team2_points_won > 0:
+                return 2
+                
+        return 0

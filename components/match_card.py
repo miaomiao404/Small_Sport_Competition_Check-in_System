@@ -10,6 +10,7 @@ class MatchCardWidget(QFrame):
     checkin_clicked = Signal(str)
     start_clicked = Signal(str)
     finish_clicked = Signal(str)
+    score_clicked = Signal(str) # 🟢 新增記分訊號
 
     def __init__(self, match_id: str, court: str, stage: str, team1_name: str, 
                  team2_name: str, match_rule: str, start_time: str, end_time: str, status: str):
@@ -27,7 +28,6 @@ class MatchCardWidget(QFrame):
         self.init_ui()
         
     def init_ui(self):
-        # ✅ 微調 2: 縮小卡片尺寸 (原 220x290 改為 190x250)
         self.setFixedSize(190, 250) 
         self.setObjectName("MatchCard")
         
@@ -41,15 +41,12 @@ class MatchCardWidget(QFrame):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
         
-        # ✅ 微調 1: 將 M001 轉換為 Match 1
         try:
-            # 去除左側的 'M' 並將剩下的字串轉為整數以消除開頭的 '0'
             display_id = f"Match {int(self.match_id.lstrip('M'))}"
         except ValueError:
-            display_id = self.match_id # 防呆：若格式不符則照原樣顯示
+            display_id = self.match_id 
 
         self.id_label = QLabel(display_id)
-        # 字體微調變小 (16px -> 14px)
         self.id_label.setStyleSheet("color: white; background-color: #2b2b2b; padding: 4px; font-weight: bold; font-size: 14px;")
         self.id_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -68,16 +65,16 @@ class MatchCardWidget(QFrame):
         stage_label = QLabel(self.stage)
         stage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        team1_label = QLabel(self.team1_name)
-        team1_label.setFont(QFont("Arial", 14, QFont.Bold)) # 字體微調變小 (16 -> 14)
-        team1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.team1_label = QLabel(self.team1_name)
+        self.team1_label.setFont(QFont("Arial", 14, QFont.Bold)) 
+        self.team1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         vs_label = QLabel("vs")
         vs_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        team2_label = QLabel(self.team2_name)
-        team2_label.setFont(QFont("Arial", 14, QFont.Bold)) # 字體微調變小
-        team2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.team2_label = QLabel(self.team2_name)
+        self.team2_label.setFont(QFont("Arial", 14, QFont.Bold)) 
+        self.team2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         rule_label = QLabel(self.match_rule)
         rule_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -89,9 +86,9 @@ class MatchCardWidget(QFrame):
         time_label.setStyleSheet("color: #555555; font-size: 11px;")
         
         body_layout.addWidget(stage_label)
-        body_layout.addWidget(team1_label)
+        body_layout.addWidget(self.team1_label)
         body_layout.addWidget(vs_label)
-        body_layout.addWidget(team2_label)
+        body_layout.addWidget(self.team2_label)
         body_layout.addWidget(rule_label)
         body_layout.addWidget(time_label)
         
@@ -101,21 +98,24 @@ class MatchCardWidget(QFrame):
         btn_layout.setContentsMargins(8, 4, 8, 8)
         
         self.btn_checkin = QPushButton("📝 檢錄")
-        self.btn_start = QPushButton("▶️ 開始賽事")
-        self.btn_finish = QPushButton("⏹️ 結束賽事")
+        self.btn_start = QPushButton("▶️ 開始")
+        self.btn_score = QPushButton("📊 記分") # 🟢 新增記分按鈕
+        self.btn_finish = QPushButton("⏹️ 結束")
         
-        # 按鈕字體稍微縮小，避免在小卡片上擠壓
         btn_style = "color: white; padding: 4px; font-size: 11px;"
         self.btn_checkin.setStyleSheet(f"background-color: #007bff; {btn_style}")
         self.btn_start.setStyleSheet(f"background-color: #28a745; {btn_style}")
+        self.btn_score.setStyleSheet(f"background-color: #6f42c1; {btn_style}") # 紫色醒目
         self.btn_finish.setStyleSheet(f"background-color: #dc3545; {btn_style}")
         
         self.btn_checkin.clicked.connect(lambda: self.checkin_clicked.emit(self.match_id))
         self.btn_start.clicked.connect(lambda: self.start_clicked.emit(self.match_id))
+        self.btn_score.clicked.connect(lambda: self.score_clicked.emit(self.match_id))
         self.btn_finish.clicked.connect(lambda: self.finish_clicked.emit(self.match_id))
         
         btn_layout.addWidget(self.btn_checkin)
         btn_layout.addWidget(self.btn_start)
+        btn_layout.addWidget(self.btn_score)
         btn_layout.addWidget(self.btn_finish)
         
         main_layout.addWidget(header_widget)
@@ -127,13 +127,31 @@ class MatchCardWidget(QFrame):
 
     def _apply_border(self, color: str, is_transparent: bool):
         border_color = "transparent" if is_transparent else color
-        # ✅ 微調 3: 框線調細 (從 4px 改為 2px solid)
         self.setStyleSheet(f"#MatchCard {{ border: 2px solid {border_color}; background-color: white; }}")
 
     def _update_button_visibility(self):
+        """根據狀態顯示對應按鈕，避免按鈕擠在一起"""
         self.btn_checkin.setVisible(self.status == "upcoming")
         self.btn_start.setVisible(self.status == "checked_in")
         self.btn_finish.setVisible(self.status == "in_progress")
+        self.btn_score.setVisible(self.status in ["in_progress", "finished"]) # 🟢 進行中與已結束皆可記分
+
+    def set_winner_ui(self, winner: int):
+        """🟢 新增：根據勝負結果改變字體顏色"""
+        base_style = "font-family: Arial; font-size: 14px; font-weight: bold;"
+        if self.status == "finished":
+            if winner == 1:
+                self.team1_label.setStyleSheet(f"{base_style} color: red;")
+                self.team2_label.setStyleSheet(f"{base_style} color: black;")
+            elif winner == 2:
+                self.team1_label.setStyleSheet(f"{base_style} color: black;")
+                self.team2_label.setStyleSheet(f"{base_style} color: red;")
+            else:
+                self.team1_label.setStyleSheet(f"{base_style} color: black;")
+                self.team2_label.setStyleSheet(f"{base_style} color: black;")
+        else:
+            self.team1_label.setStyleSheet(f"{base_style} color: black;")
+            self.team2_label.setStyleSheet(f"{base_style} color: black;")
 
     def update_state(self, current_dt: datetime.datetime, flash_1s_on: bool, flash_2s_on: bool):
         self._update_button_visibility()

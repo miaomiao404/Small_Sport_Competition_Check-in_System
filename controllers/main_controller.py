@@ -1,6 +1,6 @@
 import sys
 import datetime
-from PySide6.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsProxyWidget, QMessageBox
+from PySide6.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsProxyWidget, QMessageBox, QDialog
 from PySide6.QtCore import QTimer, QTime, QDate, Qt
 
 from ui_py.mainwindow import Ui_MainWindow
@@ -9,6 +9,7 @@ from components.match_card import MatchCardWidget
 from controllers.team_controller import TeamController
 from controllers.match_controller import MatchController
 from controllers.checkin_dialog import CheckInDialog
+from controllers.score_dialog import ScoreDialog
 class MainController:
     def __init__(self, data_manager: DataManager):
         self.dm = data_manager
@@ -116,12 +117,13 @@ class MainController:
                 card_widget.checkin_clicked.connect(self.handle_checkin)
                 card_widget.start_clicked.connect(self.handle_start_match)
                 card_widget.finish_clicked.connect(self.handle_finish_match)
+                card_widget.score_clicked.connect(self.handle_score)
             
             proxy, card_widget = self.card_cache[match.match_id]
             
             # 同步更新 Model 的最新狀態至 UI
             card_widget.status = match.status 
-            # 通知卡片根據全域時間與閃爍旗標更新外框顏色
+            card_widget.set_winner_ui(self.dm.get_match_winner(match.match_id))
             card_widget.update_state(current_dt, self.flash_1s_on, self.flash_2s_on)
 
             # 根據狀態與時間差距分流至三大看版
@@ -226,6 +228,13 @@ class MainController:
         else:
             self.match_ctrl.window.raise_()
             self.match_ctrl.window.activateWindow()
+
+    def handle_score(self, match_id: str):
+     """處理點擊「記分」按鈕"""
+     dialog = ScoreDialog(self.dm, match_id, self.window)
+     if dialog.exec() == QDialog.Accepted:
+         # 儲存分數後，觸發心跳刷新畫面與勝負字體
+         self.system_heartbeat()
 
     def show(self):
         self.window.show()

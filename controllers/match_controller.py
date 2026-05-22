@@ -7,6 +7,7 @@ from models.data_manager import DataManager
 from ui_py.matchlist import Ui_MainWindow as Ui_MatchList
 from ui_py.addmatch import Ui_court_court_edit as Ui_AddMatch
 from components.match_card import MatchCardWidget
+from controllers.score_dialog import ScoreDialog
 
 class MatchController:
     def __init__(self, data_manager: DataManager):
@@ -147,10 +148,13 @@ class MatchController:
                     start_time=match.start_time, end_time=match.end_time, status=match.status
                 )
                 
+                card.score_clicked.connect(self.handle_score)
+
                 # 在總表視圖中隱藏操作按鈕，純作為資訊展示
                 card.btn_checkin.hide()
                 card.btn_start.hide()
                 card.btn_finish.hide()
+                card.set_winner_ui(self.dm.get_match_winner(match.match_id))
                 card.setFixedSize(card_width, card_height - 40) # 扣除按鈕區的高度
                 
                 # 依據賽事狀態標示外框顏色 (靜態顯示，無閃爍)
@@ -177,3 +181,8 @@ class MatchController:
         self.ui.total_match_l.setText(f"賽事總數：{total_matches}")
         self.ui.already_matched_l.setText(f"已完成賽事數：{finished_matches}")
         self.ui.total_match_l_3.setText(f"未完成賽事數：{total_matches - finished_matches}")
+
+    def handle_score(self, match_id: str):
+        dialog = ScoreDialog(self.dm, match_id, self.window)
+        if dialog.exec() == QDialog.Accepted:
+            self._refresh_view()
