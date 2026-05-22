@@ -63,11 +63,13 @@ class DataManager:
         self.athletes_file = os.path.join(self.data_dir, "athletes.csv")
         self.matches_file = os.path.join(self.data_dir, "matches.csv")
         self.lineups_file = os.path.join(self.data_dir, "lineups.csv")
+        self.scores_file = os.path.join(self.data_dir, "scores.csv")
         
         self.teams: Dict[str, Team] = {}
         self.athletes: Dict[str, Athlete] = {}
         self.matches: Dict[str, Match] = {}
         self.lineups: List[Lineup] = [] 
+        self.scores: List[Score] = []
         
         self._load_all_data()
 
