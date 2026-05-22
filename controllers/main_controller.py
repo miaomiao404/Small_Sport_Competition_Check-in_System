@@ -19,7 +19,7 @@ class MainController:
         self.ui.setupUi(self.window)
 
         # 設定賽事名稱
-        self.ui.match_name_l.setText("2026 大專盃羽球邀請賽")
+        self.ui.match_name_l.setText("115年農院盃羽球賽")
 
         # 為三個看板區塊建立各自的 QGraphicsScene
         self.progress_scene = QGraphicsScene()
