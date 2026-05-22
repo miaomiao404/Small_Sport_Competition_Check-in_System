@@ -95,18 +95,20 @@ class MainController:
         # 時間判定基準 (將先前 MatchCardWidget 內的邏輯在此進行宏觀分類)
         fmt = "%Y-%m-%d %H:%M"
         for match in active_matches:
-            # 如果快取中沒有此卡片，則動態建立
             if match.match_id not in self.card_cache:
                 t1_name = self.dm.teams[match.team1_id].name if match.team1_id in self.dm.teams else "未知"
                 t2_name = self.dm.teams[match.team2_id].name if match.team2_id in self.dm.teams else "未知"
                 
-                # 建立實體 Widget
+                # 將分離的資料重新組合成顯示字串
+                games_str = "單局" if match.win_games == 1 else ("三戰兩勝" if match.win_games == 2 else "五戰三勝")
+                rule_display = f"{match.match_category} ({games_str}{match.points_per_game}分)"
+                
+                # 建立實體 Widget (替換原本的 match.match_type 為 rule_display)
                 card_widget = MatchCardWidget(
                     match_id=match.match_id, court=match.court, stage="分組循環賽",
-                    team1_name=t1_name, team2_name=t2_name, match_rule=match.match_type,
+                    team1_name=t1_name, team2_name=t2_name, match_rule=rule_display,
                     start_time=match.start_time, end_time=match.end_time, status=match.status
                 )
-                # 將 Widget 封裝進 Graphics Proxy 以便放入 Scene
                 proxy = QGraphicsProxyWidget()
                 proxy.setWidget(card_widget)
                 self.card_cache[match.match_id] = (proxy, card_widget)
