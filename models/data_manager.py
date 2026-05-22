@@ -30,7 +30,8 @@ class Match:
     team1_id: str
     team2_id: str
     court: str
-    scheduled_time: str
+    start_time: str
+    end_time: str
     status: str
     remark: str
 
@@ -133,4 +134,17 @@ class DataManager:
     # ==========================================
     # 賽事 (Match) CRUD (預留框架)
     # ==========================================
-    # 之後我們再補上新增 Match 的相關邏輯...
+    def add_match(self, match_id: str, match_type: str, team1_id: str, team2_id: str,
+                  court: str, start_time: str, end_time: str, status: str, remark: str):
+        
+        if match_id in self.matches:
+            raise ValueError(f"賽事編號 {match_id} 已存在，請使用其他編號。")
+            
+        new_match = Match(match_id, match_type, team1_id, team2_id, court, start_time, end_time, status, remark)
+        self.matches[match_id] = new_match
+        self._save_matches()
+
+    def _save_matches(self):
+        fieldnames = ["match_id", "match_type", "team1_id", "team2_id", "court", 
+                      "start_time", "end_time", "status", "remark"]
+        self._atomic_write_csv(self.matches_file, fieldnames, [asdict(m) for m in self.matches.values()])
