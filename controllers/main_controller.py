@@ -1,6 +1,6 @@
 import sys
 import datetime
-from PySide6.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsProxyWidget
+from PySide6.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsProxyWidget, QMessageBox
 from PySide6.QtCore import QTimer, QTime, QDate, Qt
 
 from ui_py.mainwindow import Ui_MainWindow
@@ -8,7 +8,7 @@ from models.data_manager import DataManager
 from components.match_card import MatchCardWidget
 from controllers.team_controller import TeamController
 from controllers.match_controller import MatchController
-
+from controllers.checkin_dialog import CheckInDialog
 class MainController:
     def __init__(self, data_manager: DataManager):
         self.dm = data_manager
@@ -109,6 +109,10 @@ class MainController:
                 proxy = QGraphicsProxyWidget()
                 proxy.setWidget(card_widget)
                 self.card_cache[match.match_id] = (proxy, card_widget)
+
+                card_widget.checkin_clicked.connect(self.handle_checkin)
+                card_widget.start_clicked.connect(self.handle_start_match)
+                card_widget.finish_clicked.connect(self.handle_finish_match)
             
             proxy, card_widget = self.card_cache[match.match_id]
             
@@ -163,6 +167,43 @@ class MainController:
 
         # 更新場景邊界，確保滾動條正常運作
         scene.setSceneRect(0, 0, 240, max(y_offset, 500))
+
+    # ==========================================
+    # 賽事操作邏輯 (狀態機轉移)
+    # ==========================================
+    def handle_checkin(self, match_id: str):
+        """處理點擊「檢錄」按鈕"""
+        dialog = CheckInDialog(self.dm, match_id, self.window)
+        if dialog.exec() == CheckInDialog.Accepted:
+            # 檢錄成功，更改狀態並存檔
+            self.dm.matches[match_id].status = "checked_in"
+            self.dm._save_matches()
+            QMessageBox.information(self.window, "檢錄完成", f"賽事 {match_id} 檢錄完畢，等待進場。")
+            # 立即手動觸發一次心跳以更新畫面排列
+            self.system_heartbeat()
+
+    def handle_start_match(self, match_id: str):
+        """處理點擊「開始賽事」按鈕"""
+        reply = QMessageBox.question(self.window, "確認", f"確定要開始賽事 {match_id} 嗎？\n場地將被標記為佔用。",
+                                     QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.dm.matches[match_id].status = "in_progress"
+            self.dm._save_matches()
+            self.system_heartbeat()
+
+    def handle_finish_match(self, match_id: str):
+        """處理點擊「結束賽事」按鈕"""
+        reply = QMessageBox.question(self.window, "確認", f"確定要結束賽事 {match_id} 嗎？\n這將把賽事移出主畫面。",
+                                     QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.dm.matches[match_id].status = "finished"
+            self.dm._save_matches()
+            # 結束的賽事直接從快取跟場景中移除
+            if match_id in self.card_cache:
+                proxy, _ = self.card_cache.pop(match_id)
+                if proxy.scene():
+                    proxy.scene().removeItem(proxy)
+            self.system_heartbeat()
 
     # ==========================================
     # 視窗導覽切換
