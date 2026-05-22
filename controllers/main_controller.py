@@ -5,6 +5,7 @@ from PySide6.QtCore import QTimer, QTime, QDate
 # 載入您轉好的 UI 檔案
 from ui_py.mainwindow import Ui_MainWindow
 from models.data_manager import DataManager
+from controllers.team_controller import TeamController
 
 class MainController:
     def __init__(self, data_manager: DataManager):
@@ -51,8 +52,12 @@ class MainController:
 
     def open_team_controller(self):
         """點擊「隊伍/選手名單」按鈕"""
-        print("準備開啟隊伍管理介面...")
-        # 這裡之後會呼叫 TeamController
+        if not hasattr(self, 'team_ctrl') or not self.team_ctrl.window.isVisible():
+            self.team_ctrl = TeamController(self.dm)
+            self.team_ctrl.show()
+        else:
+            self.team_ctrl.window.raise_()
+            self.team_ctrl.window.activateWindow()
 
     def open_match_controller(self):
         """點擊「所有賽事」按鈕"""
