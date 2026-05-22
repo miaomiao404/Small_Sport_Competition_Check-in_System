@@ -90,9 +90,9 @@ class MatchController:
 
         # 佈局常數設定
         x_offset = 10
-        card_width = 220
-        card_height = 290
-        spacing_x = 30
+        card_width = 190
+        card_height = 250
+        spacing_x = 20
         spacing_y = 15
         header_height = 40
         max_y = 0

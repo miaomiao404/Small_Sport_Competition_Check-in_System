@@ -59,21 +59,22 @@ class MainController:
         """系統全域心跳：每 0.5 秒更新一次時間、計時器狀態與外框閃爍"""
         current_dt = datetime.datetime.now()
         
-        # 1. 更新狀態列時間顯示
+        # 更新狀態列時間顯示
         current_time_str = current_dt.strftime("%H:%M:%S")
         current_date_str = current_dt.strftime("%Y-%m-%d")
         self.ui.statusbar.showMessage(f"目前時間: {current_date_str} {current_time_str}")
 
-        # 2. 計算全域閃爍旗標
+        # 閃爍頻率加倍
         self.flash_counter = (self.flash_counter + 1) % 4
-        # 1秒閃爍：每 2 次心跳變更一次狀態 (0.5s * 2 = 1.0s)
+        
+        # 0.5 秒閃爍
+        self.flash_1s_on = not self.flash_1s_on
+        
+        # 1.0 秒閃爍
         if self.flash_counter % 2 == 0:
-            self.flash_1s_on = not self.flash_1s_on
-        # 2秒閃爍：每 4 次心跳變更一次狀態 (0.5s * 4 = 2.0s)
-        if self.flash_counter == 0:
             self.flash_2s_on = not self.flash_2s_on
 
-        # 3. 驅動賽事狀態機與介面重新排序
+        # 驅動賽事狀態機與介面重新排序
         self.update_match_dashboard(current_dt)
 
     def update_match_dashboard(self, current_dt: datetime.datetime):
