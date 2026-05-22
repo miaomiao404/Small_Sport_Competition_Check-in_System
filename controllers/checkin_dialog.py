@@ -57,7 +57,7 @@ class CheckInDialog(QDialog):
 
         # 確認按鈕
         btn_layout = QHBoxLayout()
-        confirm_btn = QPushButton("✅ 確認檢錄並存檔")
+        confirm_btn = QPushButton("確認檢錄並存檔")
         confirm_btn.clicked.connect(self.validate_and_accept)
         btn_layout.addStretch()
         btn_layout.addWidget(confirm_btn)
@@ -65,16 +65,30 @@ class CheckInDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def validate_and_accept(self):
-        """防呆機制：確保選手都有選，且雙打不能選同一個人"""
+        """防呆機制與寫入名單"""
         t1_selected = [cb.currentData() for cb in self.t1_cboxes if cb.currentData() is not None]
         t2_selected = [cb.currentData() for cb in self.t2_cboxes if cb.currentData() is not None]
 
+        # 防呆 1：名單未選滿
         if len(t1_selected) < len(self.t1_cboxes) or len(t2_selected) < len(self.t2_cboxes):
             QMessageBox.warning(self, "錯誤", "請完整選擇雙方的出賽選手！")
             return
 
+        # 防呆 2：雙打選擇了同一個人
         if len(set(t1_selected)) != len(t1_selected) or len(set(t2_selected)) != len(t2_selected):
             QMessageBox.warning(self, "錯誤", "同一名選手不能在同一場賽事中重複排點！")
             return
 
-        self.accept()
+        # 整理要寫入 CSV 的資料結構
+        lineups_data = []
+        for athlete_id in t1_selected:
+            lineups_data.append({'team_id': self.match.team1_id, 'athlete_id': athlete_id})
+        for athlete_id in t2_selected:
+            lineups_data.append({'team_id': self.match.team2_id, 'athlete_id': athlete_id})
+            
+        # 呼叫 DataManager 進行寫入
+        try:
+            self.dm.save_match_lineup(self.match.match_id, lineups_data)
+            self.accept() # 寫入成功後才關閉對話框並回傳 Accepted
+        except Exception as e:
+            QMessageBox.critical(self, "錯誤", f"名單寫入檔案失敗: {e}")
