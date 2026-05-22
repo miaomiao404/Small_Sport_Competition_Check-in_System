@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>court_court_edit</class>
+ <widget class="QDialog" name="court_court_edit">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>編輯/加入賽事</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QFrame" name="add_athlete_f">
+     <property name="frameShape">
+      <enum>QFrame::Shape::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Shadow::Raised</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout">
+      <item row="0" column="1">
+       <widget class="QLabel" name="match_num_l">
+        <property name="text">
+         <string>賽事編號</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="3">
+       <widget class="QComboBox" name="team_2_cbox"/>
+      </item>
+      <item row="5" column="3">
+       <widget class="QComboBox" name="match_type_cbox_2">
+        <item>
+         <property name="text">
+          <string>男單</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>女單</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>男雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>女雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>混雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>團體</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QComboBox" name="team_1_cbox"/>
+      </item>
+      <item row="5" column="1">
+       <widget class="QLabel" name="match_type_l_2">
+        <property name="text">
+         <string>每局得分數</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLabel" name="match_type_l">
+        <property name="text">
+         <string>賽事類型</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QComboBox" name="match_type_cbox">
+        <item>
+         <property name="text">
+          <string>男單</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>女單</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>男雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>女雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>混雙</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>團體</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QSpinBox" name="match_num_sbox"/>
+      </item>
+      <item row="7" column="1">
+       <widget class="QLabel" name="remark_l">
+        <property name="text">
+         <string>備註</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="team_1_l">
+        <property name="text">
+         <string>隊伍一</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="team_2_l">
+        <property name="text">
+         <string>隊伍二</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="3">
+       <widget class="QLineEdit" name="remark_edit"/>
+      </item>
+      <item row="6" column="1">
+       <widget class="QLabel" name="match_court_l">
+        <property name="text">
+         <string>場地</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="3">
+       <widget class="QLineEdit" name="remark_edit_2"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>court_court_edit</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>court_court_edit</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
