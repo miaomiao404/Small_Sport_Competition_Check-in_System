@@ -106,44 +106,42 @@ class DataManager:
                     self.lineups.append(Lineup(**row))
 
     # ==========================================
-    # 隊伍 (Team) CRUD
+    # 隊伍 (Team) CRUD (請加入在原有的 add_team 之後)
     # ==========================================
-    def get_all_teams(self) -> List[Team]:
-        return list(self.teams.values())
+    def update_team(self, team_id: str, name: str):
+        if team_id in self.teams:
+            self.teams[team_id].name = name
+            self._save_teams()
 
-    def add_team(self, name: str) -> str:
-        current_ids = [int(tid[1:]) for tid in self.teams.keys() if tid.startswith('T')]
-        next_id = f"T{(max(current_ids) + 1 if current_ids else 1):03d}"
-        
-        self.teams[next_id] = Team(team_id=next_id, name=name)
+    def delete_team(self, team_id: str):
+        # 阻擋刪除邏輯：檢查是否有選手或賽程依賴此隊伍
+        if any(a.team_id == team_id for a in self.athletes.values()):
+            raise ValueError("該隊伍仍有選手名單，無法直接刪除！請先移除旗下選手。")
+        if any(m.team1_id == team_id or m.team2_id == team_id for m in self.matches.values()):
+            raise ValueError("該隊伍已有排定賽程，無法刪除！")
+            
+        del self.teams[team_id]
         self._save_teams()
-        return next_id
-
-    def _save_teams(self):
-        self._atomic_write_csv(self.teams_file, ["team_id", "name"], [asdict(t) for t in self.teams.values()])
 
     # ==========================================
-    # 選手 (Athlete) CRUD
+    # 選手 (Athlete) CRUD (請加入在原有的 add_athlete 之後)
     # ==========================================
-    def add_athlete(self, team_id: str, name: str, student_id: str, gender: str, 
-                    grade: str, department: str, is_school_team: bool, remark: str) -> str:
-        
-        current_ids = [int(pid[1:]) for pid in self.athletes.keys() if pid.startswith('P')]
-        next_id = f"P{(max(current_ids) + 1 if current_ids else 1):03d}"
-        
-        new_athlete = Athlete(next_id, team_id, name, student_id, gender, grade, department, is_school_team, remark)
-        self.athletes[next_id] = new_athlete
+    def update_athlete(self, athlete_id: str, team_id: str, name: str, student_id: str, 
+                       gender: str, grade: str, department: str, is_school_team: bool, remark: str):
+        if athlete_id in self.athletes:
+            a = self.athletes[athlete_id]
+            a.team_id, a.name, a.student_id = team_id, name, student_id
+            a.gender, a.grade, a.department = gender, grade, department
+            a.is_school_team, a.remark = is_school_team, remark
+            self._save_athletes()
+
+    def delete_athlete(self, athlete_id: str):
+        # 阻擋刪除邏輯：檢查是否已有檢錄出賽紀錄
+        if hasattr(self, 'lineups') and any(l.athlete_id == athlete_id for l in self.lineups):
+            raise ValueError("該選手已有檢錄出賽紀錄，為保留賽事歷史，無法刪除！")
+            
+        del self.athletes[athlete_id]
         self._save_athletes()
-        return next_id
-
-    def _save_athletes(self):
-        data = []
-        for athlete in self.athletes.values():
-            row = asdict(athlete)
-            row['is_school_team'] = str(row['is_school_team'])
-            data.append(row)
-        fieldnames = ["athlete_id", "team_id", "name", "student_id", "gender", "grade", "department", "is_school_team", "remark"]
-        self._atomic_write_csv(self.athletes_file, fieldnames, data)
         
     # ==========================================
     # 賽事 (Match) CRUD (預留框架)
