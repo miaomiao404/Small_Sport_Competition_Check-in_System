@@ -6,6 +6,7 @@ from PySide6.QtCore import QTimer, QTime, QDate
 from ui_py.mainwindow import Ui_MainWindow
 from models.data_manager import DataManager
 from controllers.team_controller import TeamController
+from controllers.match_controller import MatchController
 
 class MainController:
     def __init__(self, data_manager: DataManager):
@@ -61,8 +62,12 @@ class MainController:
 
     def open_match_controller(self):
         """點擊「所有賽事」按鈕"""
-        print("準備開啟賽程管理介面...")
-        # 這裡之後會呼叫 MatchController
+        if not hasattr(self, 'match_ctrl') or not self.match_ctrl.window.isVisible():
+            self.match_ctrl = MatchController(self.dm)
+            self.match_ctrl.show()
+        else:
+            self.match_ctrl.window.raise_()
+            self.match_ctrl.window.activateWindow()
 
     def show(self):
         """顯示主視窗"""
