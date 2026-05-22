@@ -43,6 +43,14 @@ class Lineup:
     team_id: str
     athlete_id: str
 
+@dataclass
+class Score:
+    match_id: str
+    point_name: str    # 記錄如 "主賽", "男單", "女單" 等點數名稱
+    game_index: int    # 第幾局 (1, 2, 3...)
+    team1_score: int
+    team2_score: int
+
 # ==========================================
 # 資料管理引擎 (DataManager)
 # ==========================================
@@ -103,6 +111,14 @@ class DataManager:
             with open(self.lineups_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     self.lineups.append(Lineup(**row))
+
+        if os.path.exists(self.scores_file):
+            with open(self.scores_file, mode='r', encoding='utf-8-sig') as f:
+                for row in csv.DictReader(f):
+                    row['game_index'] = int(row['game_index'])
+                    row['team1_score'] = int(row['team1_score'])
+                    row['team2_score'] = int(row['team2_score'])
+                    self.scores.append(Score(**row))
 
     # ==========================================
     # 隊伍 (Team) CRUD
@@ -204,3 +220,31 @@ class DataManager:
             
         fieldnames = ["match_id", "team_id", "athlete_id"]
         self._atomic_write_csv(self.lineups_file, fieldnames, [asdict(l) for l in self.lineups])
+
+    # ==========================================
+    # 比分紀錄 (Scores) CRUD
+    # ==========================================
+    def save_match_scores(self, match_id: str, scores_data: List[dict]):
+        """
+        儲存特定賽事的比分。
+        scores_data 格式: [{'point_name': '男單', 'game_index': 1, 'team1_score': 21, 'team2_score': 19}, ...]
+        """
+        # 移除舊有該場賽事的比分
+        self.scores = [s for s in self.scores if s.match_id != match_id]
+        
+        # 寫入新比分
+        for data in scores_data:
+            self.scores.append(Score(
+                match_id=match_id,
+                point_name=data['point_name'],
+                game_index=data['game_index'],
+                team1_score=data['team1_score'],
+                team2_score=data['team2_score']
+            ))
+            
+        fieldnames = ["match_id", "point_name", "game_index", "team1_score", "team2_score"]
+        self._atomic_write_csv(self.scores_file, fieldnames, [asdict(s) for s in self.scores])
+
+    def get_match_scores(self, match_id: str) -> List[Score]:
+        """取得特定賽事的所有比分紀錄"""
+        return [s for s in self.scores if s.match_id == match_id]
