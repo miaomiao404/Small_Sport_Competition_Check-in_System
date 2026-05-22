@@ -1,10 +1,11 @@
 import sys
-from PySide6.QtWidgets import QMainWindow
-from PySide6.QtCore import QTimer, QTime, QDate
+import datetime
+from PySide6.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsProxyWidget
+from PySide6.QtCore import QTimer, QTime, QDate, Qt
 
-# 載入您轉好的 UI 檔案
 from ui_py.mainwindow import Ui_MainWindow
 from models.data_manager import DataManager
+from components.match_card import MatchCardWidget
 from controllers.team_controller import TeamController
 from controllers.match_controller import MatchController
 
@@ -17,42 +18,156 @@ class MainController:
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.window)
 
-        # 設定預設的賽事名稱
+        # 設定賽事名稱
         self.ui.match_name_l.setText("2026 大專盃羽球邀請賽")
 
-        # 啟動系統時鐘 (每 1 秒觸發一次)
-        self.clock_timer = QTimer()
-        self.clock_timer.timeout.connect(self.update_clock)
-        self.clock_timer.start(1000)
-        self.update_clock() # 程式剛開時先手動呼叫一次，避免第一秒沒畫面
+        # 為三個看板區塊建立各自的 QGraphicsScene
+        self.progress_scene = QGraphicsScene()
+        self.prep_scene = QGraphicsScene()
+        self.upcoming_scene = QGraphicsScene()
 
-        # 啟動賽事狀態監控器 (例如每 60 秒檢查一次賽程時間)
-        self.status_timer = QTimer()
-        self.status_timer.timeout.connect(self.update_match_status)
-        self.status_timer.start(60000)
+        self.ui.match_in_progress_view.setScene(self.progress_scene)
+        self.ui.match_in_preperation_view.setScene(self.prep_scene)
+        self.ui.match_upcoming_view.setScene(self.upcoming_scene)
+
+        # 為了計算閃爍，設定全域的閃爍計數器與狀態旗標
+        self.flash_counter = 0
+        self.flash_1s_on = True
+        self.flash_2s_on = True
+
+        # 卡片內部快取，避免重複建立 Widget 造成畫面閃爍
+        # 格式: { match_id: (QGraphicsProxyWidget, MatchCardWidget) }
+        self.card_cache = {}
+
+        # 啟動系統核心時鐘與閃爍心跳 (每 0.5 秒觸發一次)
+        self.heartbeat_timer = QTimer()
+        self.heartbeat_timer.timeout.connect(self.system_heartbeat)
+        self.heartbeat_timer.start(500)
+        
+        # 立即執行一次初始狀態分配
+        self.system_heartbeat()
 
         # 綁定底部功能按鈕
         self._bind_signals()
 
     def _bind_signals(self):
-        """綁定 UI 按鈕的點擊事件"""
+        """綁定主畫面按鈕事件"""
         self.ui.team_list_btn.clicked.connect(self.open_team_controller)
         self.ui.all_match_btn.clicked.connect(self.open_match_controller)
 
-    def update_clock(self):
-        """更新狀態列的系統時間"""
-        current_time = QTime.currentTime().toString("HH:mm:ss")
-        current_date = QDate.currentDate().toString("yyyy-MM-dd")
-        # 顯示在您 UI 裡面的 statusbar
-        self.ui.statusbar.showMessage(f"目前時間: {current_date} {current_time}")
+    def system_heartbeat(self):
+        """系統全域心跳：每 0.5 秒更新一次時間、計時器狀態與外框閃爍"""
+        current_dt = datetime.datetime.now()
+        
+        # 1. 更新狀態列時間顯示
+        current_time_str = current_dt.strftime("%H:%M:%S")
+        current_date_str = current_dt.strftime("%Y-%m-%d")
+        self.ui.statusbar.showMessage(f"目前時間: {current_date_str} {current_time_str}")
 
-    def update_match_status(self):
-        """定期比對賽程時間，移動賽事卡片 (後續實作)"""
-        # 這裡未來會向 DataManager 拿取 match 資料，比對時間後分類到三個 QGraphicsView 中
-        pass
+        # 2. 計算全域閃爍旗標
+        self.flash_counter = (self.flash_counter + 1) % 4
+        # 1秒閃爍：每 2 次心跳變更一次狀態 (0.5s * 2 = 1.0s)
+        if self.flash_counter % 2 == 0:
+            self.flash_1s_on = not self.flash_1s_on
+        # 2秒閃爍：每 4 次心跳變更一次狀態 (0.5s * 4 = 2.0s)
+        if self.flash_counter == 0:
+            self.flash_2s_on = not self.flash_2s_on
 
+        # 3. 驅動賽事狀態機與介面重新排序
+        self.update_match_dashboard(current_dt)
+
+    def update_match_dashboard(self, current_dt: datetime.datetime):
+        """核心邏輯：比對時間、分配賽事到不同區塊，並進行垂直排序"""
+        
+        # 將未結束的賽事依照「比賽開始時間」進行升冪排序（由早到晚直排）
+        active_matches = [m for m in self.dm.matches.values() if m.status != "finished"]
+        try:
+            active_matches.sort(key=lambda x: datetime.datetime.strptime(x.start_time, "%Y-%m-%d %H:%M"))
+        except ValueError:
+            pass # 預防時間格式錯誤
+
+        # 分類容器
+        progress_list = []
+        prep_list = []
+        upcoming_list = []
+
+        # 時間判定基準 (將先前 MatchCardWidget 內的邏輯在此進行宏觀分類)
+        fmt = "%Y-%m-%d %H:%M"
+        for match in active_matches:
+            # 如果快取中沒有此卡片，則動態建立
+            if match.match_id not in self.card_cache:
+                t1_name = self.dm.teams[match.team1_id].name if match.team1_id in self.dm.teams else "未知"
+                t2_name = self.dm.teams[match.team2_id].name if match.team2_id in self.dm.teams else "未知"
+                
+                # 建立實體 Widget
+                card_widget = MatchCardWidget(
+                    match_id=match.match_id, court=match.court, stage="分組循環賽",
+                    team1_name=t1_name, team2_name=t2_name, match_rule=match.match_type,
+                    start_time=match.start_time, end_time=match.end_time, status=match.status
+                )
+                # 將 Widget 封裝進 Graphics Proxy 以便放入 Scene
+                proxy = QGraphicsProxyWidget()
+                proxy.setWidget(card_widget)
+                self.card_cache[match.match_id] = (proxy, card_widget)
+            
+            proxy, card_widget = self.card_cache[match.match_id]
+            
+            # 同步更新 Model 的最新狀態至 UI
+            card_widget.status = match.status 
+            # 通知卡片根據全域時間與閃爍旗標更新外框顏色
+            card_widget.update_state(current_dt, self.flash_1s_on, self.flash_2s_on)
+
+            # 根據狀態與時間差距分流至三大看版
+            try:
+                start_dt = datetime.datetime.strptime(match.start_time, fmt)
+                diff_start_mins = (start_dt - current_dt).total_seconds() / 60.0
+            except ValueError:
+                diff_start_mins = 9999
+
+            if match.status == "in_progress":
+                progress_list.append(proxy)
+            elif match.status == "checked_in":
+                prep_list.append(proxy)
+            elif match.status == "upcoming":
+                # 符合「準備進行」的時間條件：小於10分鐘，或是時間已到但未檢錄
+                if diff_start_mins <= 10:
+                    prep_list.append(proxy)
+                elif diff_start_mins <= 60:
+                    upcoming_list.append(proxy)
+                else:
+                    # 超過1小時的賽事暫不顯示在主畫面上，先移出場景
+                    if proxy.scene():
+                        proxy.scene().removeItem(proxy)
+
+        # 4. 重新繪製並垂直排列各個 Scene
+        self._arrange_scene(self.progress_scene, progress_list)
+        self._arrange_scene(self.prep_scene, prep_list)
+        self._arrange_scene(self.upcoming_scene, upcoming_list)
+
+    def _arrange_scene(self, scene: QGraphicsScene, proxy_list: list):
+        """將指定的 Proxy 清單由上至下垂直直排擺放，並自動調整場景大小"""
+        # 先將所有代理物件移出場景，避免殘留
+        for proxy in list(scene.items()):
+            if isinstance(proxy, QGraphicsProxyWidget):
+                scene.removeItem(proxy)
+
+        y_offset = 10
+        card_spacing = 15  # 卡片與卡片之間的垂直間距
+
+        for proxy in proxy_list:
+            scene.addItem(proxy)
+            # 居中對齊：計算 X 軸使其在視圖寬度內水平置中 (預設寬度約 220-240)
+            proxy.setPos(10, y_offset)
+            # 累加高度 (MatchCardWidget 固定高度為 260)
+            y_offset += 260 + card_spacing
+
+        # 更新場景邊界，確保滾動條正常運作
+        scene.setSceneRect(0, 0, 240, max(y_offset, 500))
+
+    # ==========================================
+    # 視窗導覽切換
+    # ==========================================
     def open_team_controller(self):
-        """點擊「隊伍/選手名單」按鈕"""
         if not hasattr(self, 'team_ctrl') or not self.team_ctrl.window.isVisible():
             self.team_ctrl = TeamController(self.dm)
             self.team_ctrl.show()
@@ -61,7 +176,6 @@ class MainController:
             self.team_ctrl.window.activateWindow()
 
     def open_match_controller(self):
-        """點擊「所有賽事」按鈕"""
         if not hasattr(self, 'match_ctrl') or not self.match_ctrl.window.isVisible():
             self.match_ctrl = MatchController(self.dm)
             self.match_ctrl.show()
@@ -70,5 +184,4 @@ class MainController:
             self.match_ctrl.window.activateWindow()
 
     def show(self):
-        """顯示主視窗"""
         self.window.show()
