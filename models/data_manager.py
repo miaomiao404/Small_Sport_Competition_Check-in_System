@@ -65,7 +65,8 @@ class DataManager:
         """原子寫入法，避免寫入一半崩潰導致檔案損毀"""
         temp_file = file_path + ".tmp"
         try:
-            with open(temp_file, mode='w', newline='', encoding='utf-8') as f:
+            # 💡 修正 1：寫入時使用 utf-8-sig 加上 BOM，解決 Excel 中文亂碼與跑版問題
+            with open(temp_file, mode='w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(data_list)
@@ -78,24 +79,25 @@ class DataManager:
 
     def _load_all_data(self):
         """從 CSV 載入資料到記憶體"""
+        # 💡 修正 2：讀取時也統一使用 utf-8-sig
         if os.path.exists(self.teams_file):
-            with open(self.teams_file, mode='r', encoding='utf-8') as f:
+            with open(self.teams_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     self.teams[row['team_id']] = Team(**row)
 
         if os.path.exists(self.athletes_file):
-            with open(self.athletes_file, mode='r', encoding='utf-8') as f:
+            with open(self.athletes_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     row['is_school_team'] = row['is_school_team'] == 'True'
                     self.athletes[row['athlete_id']] = Athlete(**row)
                     
         if os.path.exists(self.matches_file):
-            with open(self.matches_file, mode='r', encoding='utf-8') as f:
+            with open(self.matches_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     self.matches[row['match_id']] = Match(**row)
 
         if os.path.exists(self.lineups_file):
-            with open(self.lineups_file, mode='r', encoding='utf-8') as f:
+            with open(self.lineups_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     self.lineups.append(Lineup(**row))
 
