@@ -40,6 +40,7 @@ class Match:
 @dataclass
 class Lineup:
     match_id: str
+    point_name: str
     team_id: str
     athlete_id: str
 
@@ -112,6 +113,8 @@ class DataManager:
         if os.path.exists(self.lineups_file):
             with open(self.lineups_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
+                    if 'point_name' not in row:
+                        row['point_name'] = '主賽'
                     self.lineups.append(Lineup(**row))
 
         if os.path.exists(self.scores_file):
@@ -217,10 +220,11 @@ class DataManager:
         
         for data in lineups_data:
             self.lineups.append(Lineup(match_id=match_id, 
+                                       point_name=data['point_name'], # 🟢 新增
                                        team_id=data['team_id'], 
                                        athlete_id=data['athlete_id']))
             
-        fieldnames = ["match_id", "team_id", "athlete_id"]
+        fieldnames = ["match_id", "point_name", "team_id", "athlete_id"] # 🟢 新增欄位
         self._atomic_write_csv(self.lineups_file, fieldnames, [asdict(l) for l in self.lineups])
 
     # ==========================================
