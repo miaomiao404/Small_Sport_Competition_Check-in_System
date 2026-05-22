@@ -35,6 +35,12 @@ class Match:
     status: str
     remark: str
 
+@dataclass
+class Lineup:
+    match_id: str
+    team_id: str
+    athlete_id: str
+
 # ==========================================
 # 資料管理引擎 (DataManager)
 # ==========================================
@@ -90,6 +96,12 @@ class DataManager:
             with open(self.matches_file, mode='r', encoding='utf-8') as f:
                 for row in csv.DictReader(f):
                     self.matches[row['match_id']] = Match(**row)
+
+        # 載入 Lineups
+        if os.path.exists(self.lineups_file):
+            with open(self.lineups_file, mode='r', encoding='utf-8') as f:
+                for row in csv.DictReader(f):
+                    self.lineups.append(Lineup(**row))
 
     # ==========================================
     # 隊伍 (Team) CRUD
@@ -148,3 +160,24 @@ class DataManager:
         fieldnames = ["match_id", "match_type", "team1_id", "team2_id", "court", 
                       "start_time", "end_time", "status", "remark"]
         self._atomic_write_csv(self.matches_file, fieldnames, [asdict(m) for m in self.matches.values()])
+
+    # ==========================================
+    # 檢錄名單 (Lineups) CRUD
+    # ==========================================
+    def save_match_lineup(self, match_id: str, lineups_data: List[dict]):
+        """
+        儲存特定賽事的檢錄名單。
+        傳入格式範例: [{'team_id': 'T001', 'athlete_id': 'P001'}, ...]
+        """
+        # 1. 為了防呆（例如賽務人員重新檢錄），先移除該場賽事舊有的排點紀錄
+        self.lineups = [l for l in self.lineups if l.match_id != match_id]
+        
+        # 2. 將新的選手名單加入記憶體中
+        for data in lineups_data:
+            self.lineups.append(Lineup(match_id=match_id, 
+                                       team_id=data['team_id'], 
+                                       athlete_id=data['athlete_id']))
+            
+        # 3. 執行原子寫入存檔
+        fieldnames = ["match_id", "team_id", "athlete_id"]
+        self._atomic_write_csv(self.lineups_file, fieldnames, [asdict(l) for l in self.lineups])
