@@ -52,11 +52,13 @@ class DataManager:
         self.teams_file = os.path.join(self.data_dir, "teams.csv")
         self.athletes_file = os.path.join(self.data_dir, "athletes.csv")
         self.matches_file = os.path.join(self.data_dir, "matches.csv")
+        self.lineups_file = os.path.join(self.data_dir, "lineups.csv")
         
         # 記憶體快取 (Dictionary)
         self.teams: Dict[str, Team] = {}
         self.athletes: Dict[str, Athlete] = {}
         self.matches: Dict[str, Match] = {}
+        self.lineups: List[Lineup] = []
         
         # 啟動時載入資料
         self._load_all_data()
