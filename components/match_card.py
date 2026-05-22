@@ -7,7 +7,6 @@ UPCOMING_MINUTES = 60
 PREP_MINUTES = 10
 
 class MatchCardWidget(QFrame):
-    # 定義自訂信號，當按鈕被點擊時，會將自己的 match_id 傳送出去給 Controller
     checkin_clicked = Signal(str)
     start_clicked = Signal(str)
     finish_clicked = Signal(str)
@@ -28,32 +27,40 @@ class MatchCardWidget(QFrame):
         self.init_ui()
         
     def init_ui(self):
-        # 稍微增加卡片高度以容納按鈕
-        self.setFixedSize(220, 290) 
+        # ✅ 微調 2: 縮小卡片尺寸 (原 220x290 改為 190x250)
+        self.setFixedSize(190, 250) 
         self.setObjectName("MatchCard")
         
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # --- 1. 頂部標題列 (與先前相同) ---
+        # --- 1. 頂部標題列 ---
         header_widget = QWidget()
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
         
-        self.id_label = QLabel(self.match_id)
-        self.id_label.setStyleSheet("color: white; background-color: #2b2b2b; padding: 5px; font-weight: bold; font-size: 16px;")
+        # ✅ 微調 1: 將 M001 轉換為 Match 1
+        try:
+            # 去除左側的 'M' 並將剩下的字串轉為整數以消除開頭的 '0'
+            display_id = f"Match {int(self.match_id.lstrip('M'))}"
+        except ValueError:
+            display_id = self.match_id # 防呆：若格式不符則照原樣顯示
+
+        self.id_label = QLabel(display_id)
+        # 字體微調變小 (16px -> 14px)
+        self.id_label.setStyleSheet("color: white; background-color: #2b2b2b; padding: 4px; font-weight: bold; font-size: 14px;")
         self.id_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         self.court_label = QLabel(f"場地 {self.court}")
-        self.court_label.setStyleSheet("color: black; background-color: white; padding: 5px; font-weight: bold; font-size: 16px;")
+        self.court_label.setStyleSheet("color: black; background-color: white; padding: 4px; font-weight: bold; font-size: 14px;")
         self.court_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         header_layout.addWidget(self.id_label, 1)
         header_layout.addWidget(self.court_label, 1)
         
-        # --- 2. 主資訊區 (與先前相同) ---
+        # --- 2. 主資訊區 ---
         body_widget = QWidget()
         body_layout = QVBoxLayout(body_widget)
         body_layout.setContentsMargins(10, 5, 10, 5)
@@ -62,14 +69,14 @@ class MatchCardWidget(QFrame):
         stage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         team1_label = QLabel(self.team1_name)
-        team1_label.setFont(QFont("Arial", 16, QFont.Bold))
+        team1_label.setFont(QFont("Arial", 14, QFont.Bold)) # 字體微調變小 (16 -> 14)
         team1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         vs_label = QLabel("vs")
         vs_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         team2_label = QLabel(self.team2_name)
-        team2_label.setFont(QFont("Arial", 16, QFont.Bold))
+        team2_label.setFont(QFont("Arial", 14, QFont.Bold)) # 字體微調變小
         team2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         rule_label = QLabel(self.match_rule)
@@ -79,7 +86,7 @@ class MatchCardWidget(QFrame):
         end_hm = self.end_time.split(" ")[1] if " " in self.end_time else self.end_time
         time_label = QLabel(f"{start_hm} - {end_hm}")
         time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        time_label.setStyleSheet("color: #555555; font-size: 12px;")
+        time_label.setStyleSheet("color: #555555; font-size: 11px;")
         
         body_layout.addWidget(stage_label)
         body_layout.addWidget(team1_label)
@@ -88,20 +95,21 @@ class MatchCardWidget(QFrame):
         body_layout.addWidget(rule_label)
         body_layout.addWidget(time_label)
         
-        # --- 3. 底部操作按鈕區 (新增) ---
+        # --- 3. 底部操作按鈕區 ---
         btn_widget = QWidget()
         btn_layout = QHBoxLayout(btn_widget)
-        btn_layout.setContentsMargins(10, 5, 10, 10)
+        btn_layout.setContentsMargins(8, 4, 8, 8)
         
         self.btn_checkin = QPushButton("📝 檢錄")
         self.btn_start = QPushButton("▶️ 開始賽事")
         self.btn_finish = QPushButton("⏹️ 結束賽事")
         
-        self.btn_checkin.setStyleSheet("background-color: #007bff; color: white; padding: 5px;")
-        self.btn_start.setStyleSheet("background-color: #28a745; color: white; padding: 5px;")
-        self.btn_finish.setStyleSheet("background-color: #dc3545; color: white; padding: 5px;")
+        # 按鈕字體稍微縮小，避免在小卡片上擠壓
+        btn_style = "color: white; padding: 4px; font-size: 11px;"
+        self.btn_checkin.setStyleSheet(f"background-color: #007bff; {btn_style}")
+        self.btn_start.setStyleSheet(f"background-color: #28a745; {btn_style}")
+        self.btn_finish.setStyleSheet(f"background-color: #dc3545; {btn_style}")
         
-        # 綁定按鈕點擊事件，發射帶有 ID 的信號
         self.btn_checkin.clicked.connect(lambda: self.checkin_clicked.emit(self.match_id))
         self.btn_start.clicked.connect(lambda: self.start_clicked.emit(self.match_id))
         self.btn_finish.clicked.connect(lambda: self.finish_clicked.emit(self.match_id))
@@ -119,16 +127,15 @@ class MatchCardWidget(QFrame):
 
     def _apply_border(self, color: str, is_transparent: bool):
         border_color = "transparent" if is_transparent else color
-        self.setStyleSheet(f"#MatchCard {{ border: 4px solid {border_color}; background-color: white; }}")
+        # ✅ 微調 3: 框線調細 (從 4px 改為 2px solid)
+        self.setStyleSheet(f"#MatchCard {{ border: 2px solid {border_color}; background-color: white; }}")
 
     def _update_button_visibility(self):
-        """根據賽事狀態，顯示或隱藏對應的操作按鈕"""
         self.btn_checkin.setVisible(self.status == "upcoming")
         self.btn_start.setVisible(self.status == "checked_in")
         self.btn_finish.setVisible(self.status == "in_progress")
 
     def update_state(self, current_dt: datetime.datetime, flash_1s_on: bool, flash_2s_on: bool):
-        # 每次更新狀態時，確保按鈕的顯示邏輯也是最新的
         self._update_button_visibility()
         
         fmt = "%Y-%m-%d %H:%M"
