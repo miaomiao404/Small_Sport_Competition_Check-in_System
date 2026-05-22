@@ -26,7 +26,9 @@ class Athlete:
 @dataclass
 class Match:
     match_id: str
-    match_type: str
+    match_category: str
+    win_games: int
+    points_per_game: int
     team1_id: str
     team2_id: str
     court: str
@@ -79,7 +81,6 @@ class DataManager:
 
     def _load_all_data(self):
         """從 CSV 載入資料到記憶體"""
-        # 💡 修正 2：讀取時也統一使用 utf-8-sig
         if os.path.exists(self.teams_file):
             with open(self.teams_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
@@ -94,6 +95,8 @@ class DataManager:
         if os.path.exists(self.matches_file):
             with open(self.matches_file, mode='r', encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
+                    row['win_games'] = int(row['win_games'])
+                    row['points_per_game'] = int(row['points_per_game'])
                     self.matches[row['match_id']] = Match(**row)
 
         if os.path.exists(self.lineups_file):
@@ -173,19 +176,19 @@ class DataManager:
     # ==========================================
     # 賽事 (Match) CRUD
     # ==========================================
-    def add_match(self, match_id: str, match_type: str, team1_id: str, team2_id: str,
-                  court: str, start_time: str, end_time: str, status: str, remark: str):
+    def add_match(self, match_id: str, match_category: str, win_games: int, points_per_game: int,
+                  team1_id: str, team2_id: str, court: str, start_time: str, end_time: str, status: str, remark: str):
         
         if match_id in self.matches:
             raise ValueError(f"賽事編號 {match_id} 已存在，請使用其他編號。")
             
-        new_match = Match(match_id, match_type, team1_id, team2_id, court, start_time, end_time, status, remark)
+        new_match = Match(match_id, match_category, win_games, points_per_game, team1_id, team2_id, court, start_time, end_time, status, remark)
         self.matches[match_id] = new_match
         self._save_matches()
 
     def _save_matches(self):
-        fieldnames = ["match_id", "match_type", "team1_id", "team2_id", "court", 
-                      "start_time", "end_time", "status", "remark"]
+        fieldnames = ["match_id", "match_category", "win_games", "points_per_game", 
+                      "team1_id", "team2_id", "court", "start_time", "end_time", "status", "remark"]
         self._atomic_write_csv(self.matches_file, fieldnames, [asdict(m) for m in self.matches.values()])
 
     # ==========================================

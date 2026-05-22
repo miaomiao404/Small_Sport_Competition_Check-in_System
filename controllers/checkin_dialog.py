@@ -24,12 +24,15 @@ class CheckInDialog(QDialog):
         self.setMinimumWidth(500)
         layout = QVBoxLayout(self)
 
-        info_label = QLabel(f"<b>賽制：</b>{self.match.match_type}<br>"
+        games_str = "單局" if self.match.win_games == 1 else ("三戰兩勝" if self.match.win_games == 2 else "五戰三勝")
+        rule_display = f"{self.match.match_category} ({games_str}{self.match.points_per_game}分)"
+
+        info_label = QLabel(f"<b>賽制：</b>{rule_display}<br>"
                             f"<b>隊伍：</b>{self.team1.name} vs {self.team2.name}")
         info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(info_label)
 
-        players_needed = 2 if "雙" in self.match.match_type else 1
+        players_needed = 2 if "雙" in self.match.match_category else 1
         
         gb1 = QGroupBox(f"{self.team1.name} 出賽名單")
         vbox1 = QVBoxLayout(gb1)

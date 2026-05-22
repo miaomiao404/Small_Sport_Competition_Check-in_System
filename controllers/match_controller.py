@@ -43,8 +43,13 @@ class MatchController:
             ui.team_1_cbox.addItem(team.name, userData=team.team_id)
             ui.team_2_cbox.addItem(team.name, userData=team.team_id)
 
+        # ✅ 更新局數與分數選項
         ui.match_type_cbox_2.clear()
-        ui.match_type_cbox_2.addItems(["11分制", "21分制", "25分制", "31分制"])
+        ui.match_type_cbox_2.addItems([
+            "單局11分", "單局15分", "單局21分", "單局25分",
+            "三戰兩勝11分", "三戰兩勝15分", "三戰兩勝21分", "三戰兩勝25分",
+            "五戰三勝11分", "五戰三勝21分"
+        ])
 
         if dialog.exec() == QDialog.Accepted:
             match_num = str(ui.match_num_sbox.value())
@@ -57,14 +62,29 @@ class MatchController:
                 QMessageBox.warning(self.window, "錯誤", "對戰隊伍不能相同！")
                 return
                 
-            match_type = f"{ui.match_type_cbox.currentText()} ({ui.match_type_cbox_2.currentText()})"
+            match_category = ui.match_type_cbox.currentText()
+            selected_rule = ui.match_type_cbox_2.currentText()
+            
+            # ✅ 將字串轉換為數字邏輯
+            if "單局" in selected_rule:
+                win_games = 1
+                points_per_game = int(selected_rule.replace("單局", "").replace("分", ""))
+            elif "三戰兩勝" in selected_rule:
+                win_games = 2
+                points_per_game = int(selected_rule.replace("三戰兩勝", "").replace("分", ""))
+            elif "五戰三勝" in selected_rule:
+                win_games = 3
+                points_per_game = int(selected_rule.replace("五戰三勝", "").replace("分", ""))
+            else:
+                win_games, points_per_game = 1, 21
+
             start_time = ui.start_time_dtedit.dateTime().toString("yyyy-MM-dd HH:mm")
             end_time = ui.end_time_dtedit.dateTime().toString("yyyy-MM-dd HH:mm")
             court = ui.remark_edit_2.text().strip()
             remark = ui.remark_edit.text().strip()
 
             try:
-                self.dm.add_match(match_id, match_type, team1_id, team2_id, 
+                self.dm.add_match(match_id, match_category, win_games, points_per_game, team1_id, team2_id, 
                                   court, start_time, end_time, "upcoming", remark)
                 self._refresh_view()
                 QMessageBox.information(self.window, "成功", f"賽事 {match_id} 已排定。")
@@ -114,6 +134,9 @@ class MatchController:
             for match in matches_in_slot:
                 t1_name = self.dm.teams[match.team1_id].name if match.team1_id in self.dm.teams else "未知"
                 t2_name = self.dm.teams[match.team2_id].name if match.team2_id in self.dm.teams else "未知"
+
+                games_str = "單局" if match.win_games == 1 else ("三戰兩勝" if match.win_games == 2 else "五戰三勝")
+                rule_display = f"{match.match_category} ({games_str}{match.points_per_game}分)"
                 
                 card = MatchCardWidget(
                     match_id=match.match_id, court=match.court, stage="分組循環賽",
